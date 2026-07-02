@@ -72,7 +72,8 @@ export class GoogleOAuthService {
     });
 
     if (!tokenResponse.ok) {
-      throw new Error('Failed to exchange Google OAuth code.');
+      const errorBody = await tokenResponse.text();
+      throw new Error(`Failed to exchange Google OAuth code. Response: ${errorBody}`);
     }
 
     const token = (await tokenResponse.json()) as GoogleTokenResponse;
