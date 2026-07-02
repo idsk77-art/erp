@@ -6,6 +6,7 @@ export type CalendarEvent = OwnedEntity & {
   startsAt: ISODateTime;
   endsAt: ISODateTime;
   location?: string;
+  googleEventId?: string;
 };
 
 export type CreateCalendarEventInput = {

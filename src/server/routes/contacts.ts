@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 
+import type { GoogleApiService } from '../../services/google-api.js';
 import type { ContactRepository, UserRepository } from '../../storage/repositories/index.js';
 import { getUserIdFromRequest } from '../request-context.js';
 
@@ -19,6 +20,7 @@ const ParamsSchema = z.object({ id: z.string().min(1) });
 type ContactRoutesOptions = {
   contacts: ContactRepository;
   users: UserRepository;
+  googleApi: GoogleApiService;
 };
 
 export async function registerContactRoutes(
@@ -49,8 +51,14 @@ export async function registerContactRoutes(
     const body = CreateContactSchema.parse(request.body);
     options.users.ensureLocalUser(userId);
 
+    // Sync to Google Contacts
+    const googleResourceName = await options.googleApi.createContact(userId, body);
+
     return reply.code(201).send({
-      item: options.contacts.create(userId, body),
+      item: options.contacts.create(userId, {
+        ...body,
+        googleResourceName: googleResourceName ?? undefined,
+      }),
     });
   });
 
@@ -101,6 +109,12 @@ export async function registerContactRoutes(
     const params = ParamsSchema.parse(request.params);
     options.users.ensureLocalUser(userId);
 
+    const existing = options.contacts.findById(userId, params.id);
+    if (existing && existing.googleResourceName) {
+      // Sync delete to Google Contacts
+      await options.googleApi.deleteContact(userId, existing.googleResourceName);
+    }
+
     if (!options.contacts.delete(userId, params.id)) {
       return reply.code(404).send({ message: 'Contact was not found.' });
     }
@@ -120,8 +134,14 @@ export async function registerContactRoutes(
     }).parse(request.body);
     options.users.ensureLocalUser(userId);
 
+    // Sync to Google Contacts
+    const googleResourceName = await options.googleApi.createContact(userId, body);
+
     return reply.code(201).send({
-      item: options.contacts.create(userId, body),
+      item: options.contacts.create(userId, {
+        ...body,
+        googleResourceName: googleResourceName ?? undefined,
+      }),
       scan: {
         status: 'reviewed',
         rawText: body.rawText ?? '',

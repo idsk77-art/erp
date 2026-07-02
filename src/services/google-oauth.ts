@@ -10,6 +10,15 @@ export type GoogleUserInfo = {
 
 type GoogleTokenResponse = {
   access_token: string;
+  refresh_token?: string;
+  expires_in: number;
+};
+
+export type GoogleOAuthExchangeResult = {
+  userInfo: GoogleUserInfo;
+  accessToken: string;
+  refreshToken?: string | undefined;
+  expiresIn: number;
 };
 
 export class GoogleOAuthService {
@@ -29,7 +38,10 @@ export class GoogleOAuthService {
     url.searchParams.set('client_id', this.config.googleClientId);
     url.searchParams.set('redirect_uri', this.config.googleCallbackUrl);
     url.searchParams.set('response_type', 'code');
-    url.searchParams.set('scope', 'openid email profile');
+    url.searchParams.set(
+      'scope',
+      'openid email profile https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/contacts',
+    );
     url.searchParams.set('access_type', 'offline');
     url.searchParams.set('prompt', 'consent');
     url.searchParams.set('state', state);
@@ -40,7 +52,7 @@ export class GoogleOAuthService {
     };
   }
 
-  async exchangeCodeForUser(code: string): Promise<GoogleUserInfo> {
+  async exchangeCodeForUser(code: string): Promise<GoogleOAuthExchangeResult> {
     if (!this.config.googleClientId || !this.config.googleClientSecret) {
       throw new Error('Google OAuth is not configured.');
     }
@@ -74,6 +86,41 @@ export class GoogleOAuthService {
       throw new Error('Failed to fetch Google user info.');
     }
 
-    return (await userInfoResponse.json()) as GoogleUserInfo;
+    const userInfo = (await userInfoResponse.json()) as GoogleUserInfo;
+    return {
+      userInfo,
+      accessToken: token.access_token,
+      refreshToken: token.refresh_token,
+      expiresIn: token.expires_in,
+    };
+  }
+
+  async refreshAccessToken(refreshToken: string): Promise<{ accessToken: string; expiresIn: number }> {
+    if (!this.config.googleClientId || !this.config.googleClientSecret) {
+      throw new Error('Google OAuth is not configured.');
+    }
+
+    const response = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        client_id: this.config.googleClientId,
+        client_secret: this.config.googleClientSecret,
+        refresh_token: refreshToken,
+        grant_type: 'refresh_token',
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to refresh Google OAuth token.');
+    }
+
+    const data = (await response.json()) as { access_token: string; expires_in: number };
+    return {
+      accessToken: data.access_token,
+      expiresIn: data.expires_in,
+    };
   }
 }

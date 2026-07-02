@@ -15,8 +15,18 @@ type CalendarEventRow = {
   starts_at: string;
   ends_at: string;
   location: string | null;
+  google_event_id: string | null;
   created_at: string;
   updated_at: string;
+};
+
+// We will extend the input types inside repository to optionally accept googleEventId
+export type RepoCreateCalendarEventInput = CreateCalendarEventInput & {
+  googleEventId?: string | undefined;
+};
+
+export type RepoUpdateCalendarEventInput = UpdateCalendarEventInput & {
+  googleEventId?: string | undefined;
 };
 
 export class CalendarEventRepository {
@@ -36,7 +46,7 @@ export class CalendarEventRepository {
     return rows.map(toCalendarEvent);
   }
 
-  create(userId: string, input: CreateCalendarEventInput): CalendarEvent {
+  create(userId: string, input: RepoCreateCalendarEventInput): CalendarEvent {
     const now = new Date().toISOString();
     const event: CalendarEvent = {
       id: randomUUID(),
@@ -48,15 +58,16 @@ export class CalendarEventRepository {
       updatedAt: now,
       ...(input.description ? { description: input.description } : {}),
       ...(input.location ? { location: input.location } : {}),
+      ...(input.googleEventId ? { googleEventId: input.googleEventId } : {}),
     };
 
     this.database
       .prepare(
         `
         INSERT INTO calendar_events (
-          id, user_id, title, description, starts_at, ends_at, location, created_at, updated_at
+          id, user_id, title, description, starts_at, ends_at, location, google_event_id, created_at, updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       )
       .run(
@@ -67,6 +78,7 @@ export class CalendarEventRepository {
         event.startsAt,
         event.endsAt,
         event.location ?? null,
+        event.googleEventId ?? null,
         event.createdAt,
         event.updatedAt,
       );
@@ -82,7 +94,7 @@ export class CalendarEventRepository {
     return row ? toCalendarEvent(row) : null;
   }
 
-  update(userId: string, eventId: string, input: UpdateCalendarEventInput): CalendarEvent | null {
+  update(userId: string, eventId: string, input: RepoUpdateCalendarEventInput): CalendarEvent | null {
     const existing = this.findById(userId, eventId);
 
     if (!existing) {
@@ -95,6 +107,7 @@ export class CalendarEventRepository {
       startsAt: input.startsAt ?? existing.startsAt,
       endsAt: input.endsAt ?? existing.endsAt,
       location: input.location ?? existing.location ?? null,
+      googleEventId: input.googleEventId ?? existing.googleEventId ?? null,
       updatedAt: new Date().toISOString(),
     };
 
@@ -102,7 +115,7 @@ export class CalendarEventRepository {
       .prepare(
         `
         UPDATE calendar_events
-        SET title = ?, description = ?, starts_at = ?, ends_at = ?, location = ?, updated_at = ?
+        SET title = ?, description = ?, starts_at = ?, ends_at = ?, location = ?, google_event_id = ?, updated_at = ?
         WHERE id = ? AND user_id = ?
       `,
       )
@@ -112,6 +125,7 @@ export class CalendarEventRepository {
         updated.startsAt,
         updated.endsAt,
         updated.location,
+        updated.googleEventId,
         updated.updatedAt,
         eventId,
         userId,
@@ -140,5 +154,6 @@ function toCalendarEvent(row: CalendarEventRow): CalendarEvent {
     updatedAt: row.updated_at,
     ...(row.description ? { description: row.description } : {}),
     ...(row.location ? { location: row.location } : {}),
+    ...(row.google_event_id ? { googleEventId: row.google_event_id } : {}),
   };
 }

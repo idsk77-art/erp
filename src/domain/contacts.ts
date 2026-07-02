@@ -8,6 +8,7 @@ export type Contact = OwnedEntity & {
   email?: string;
   memo?: string;
   businessCardImagePath?: string;
+  googleResourceName?: string;
 };
 
 export type BusinessCardScanResult = {

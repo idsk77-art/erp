@@ -8,6 +8,9 @@ export function runMigrations(database: Database): void {
       name TEXT NOT NULL,
       profile_image_url TEXT,
       last_login_at TEXT NOT NULL,
+      google_access_token TEXT,
+      google_refresh_token TEXT,
+      google_token_expiry INTEGER,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
@@ -20,6 +23,7 @@ export function runMigrations(database: Database): void {
       starts_at TEXT NOT NULL,
       ends_at TEXT NOT NULL,
       location TEXT,
+      google_event_id TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -54,6 +58,7 @@ export function runMigrations(database: Database): void {
       email TEXT,
       memo TEXT,
       business_card_image_path TEXT,
+      google_resource_name TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -94,4 +99,21 @@ export function runMigrations(database: Database): void {
     CREATE INDEX IF NOT EXISTS idx_audio_reports_user_created
       ON audio_reports(user_id, created_at);
   `);
+
+  // Run column updates for existing databases
+  try {
+    database.exec('ALTER TABLE users ADD COLUMN google_access_token TEXT;');
+  } catch {}
+  try {
+    database.exec('ALTER TABLE users ADD COLUMN google_refresh_token TEXT;');
+  } catch {}
+  try {
+    database.exec('ALTER TABLE users ADD COLUMN google_token_expiry INTEGER;');
+  } catch {}
+  try {
+    database.exec('ALTER TABLE calendar_events ADD COLUMN google_event_id TEXT;');
+  } catch {}
+  try {
+    database.exec('ALTER TABLE contacts ADD COLUMN google_resource_name TEXT;');
+  } catch {}
 }

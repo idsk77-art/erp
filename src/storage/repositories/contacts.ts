@@ -13,6 +13,7 @@ type ContactRow = {
   email: string | null;
   memo: string | null;
   business_card_image_path: string | null;
+  google_resource_name: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -25,6 +26,7 @@ export type CreateContactInput = {
   email?: string | undefined;
   memo?: string | undefined;
   businessCardImagePath?: string | undefined;
+  googleResourceName?: string | undefined;
 };
 
 export type UpdateContactInput = {
@@ -35,6 +37,7 @@ export type UpdateContactInput = {
   email?: string | undefined;
   memo?: string | undefined;
   businessCardImagePath?: string | undefined;
+  googleResourceName?: string | undefined;
 };
 
 export class ContactRepository {
@@ -70,6 +73,7 @@ export class ContactRepository {
       ...(input.businessCardImagePath
         ? { businessCardImagePath: input.businessCardImagePath }
         : {}),
+      ...(input.googleResourceName ? { googleResourceName: input.googleResourceName } : {}),
     };
 
     this.database
@@ -77,9 +81,9 @@ export class ContactRepository {
         `
         INSERT INTO contacts (
           id, user_id, name, company_name, job_title, phone_number, email, memo,
-          business_card_image_path, created_at, updated_at
+          business_card_image_path, google_resource_name, created_at, updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       )
       .run(
@@ -92,6 +96,7 @@ export class ContactRepository {
         contact.email ?? null,
         contact.memo ?? null,
         contact.businessCardImagePath ?? null,
+        contact.googleResourceName ?? null,
         contact.createdAt,
         contact.updatedAt,
       );
@@ -122,6 +127,7 @@ export class ContactRepository {
       email: input.email ?? existing.email ?? null,
       memo: input.memo ?? existing.memo ?? null,
       businessCardImagePath: input.businessCardImagePath ?? existing.businessCardImagePath ?? null,
+      googleResourceName: input.googleResourceName ?? existing.googleResourceName ?? null,
       updatedAt: new Date().toISOString(),
     };
 
@@ -130,7 +136,7 @@ export class ContactRepository {
         `
         UPDATE contacts
         SET name = ?, company_name = ?, job_title = ?, phone_number = ?, email = ?,
-            memo = ?, business_card_image_path = ?, updated_at = ?
+            memo = ?, business_card_image_path = ?, google_resource_name = ?, updated_at = ?
         WHERE id = ? AND user_id = ?
       `,
       )
@@ -142,6 +148,7 @@ export class ContactRepository {
         updated.email,
         updated.memo,
         updated.businessCardImagePath,
+        updated.googleResourceName,
         updated.updatedAt,
         contactId,
         userId,
@@ -174,5 +181,6 @@ function toContact(row: ContactRow): Contact {
     ...(row.business_card_image_path
       ? { businessCardImagePath: row.business_card_image_path }
       : {}),
+    ...(row.google_resource_name ? { googleResourceName: row.google_resource_name } : {}),
   };
 }

@@ -29,6 +29,10 @@ export async function registerAuthRoutes(
     const query = z.object({ code: z.string().min(1) }).parse(request.query);
     
     let googleUser;
+    let googleAccessToken: string | undefined;
+    let googleRefreshToken: string | undefined;
+    let googleTokenExpiry: number | undefined;
+
     if (query.code.startsWith('mock-code') || !options.googleOAuth.isConfigured()) {
       googleUser = {
         email: 'local-user@example.com',
@@ -36,13 +40,20 @@ export async function registerAuthRoutes(
         picture: 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y',
       };
     } else {
-      googleUser = await options.googleOAuth.exchangeCodeForUser(query.code);
+      const result = await options.googleOAuth.exchangeCodeForUser(query.code);
+      googleUser = result.userInfo;
+      googleAccessToken = result.accessToken;
+      googleRefreshToken = result.refreshToken;
+      googleTokenExpiry = Math.floor(Date.now() / 1000) + result.expiresIn;
     }
 
     const user = options.users.upsertFromGoogleProfile({
       email: googleUser.email,
       name: googleUser.name,
       ...(googleUser.picture ? { profileImageUrl: googleUser.picture } : {}),
+      googleAccessToken,
+      googleRefreshToken,
+      googleTokenExpiry,
     });
 
     const token = signJwt({ userId: user.id });

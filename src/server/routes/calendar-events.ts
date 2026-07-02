@@ -4,6 +4,8 @@ import { z } from 'zod';
 import { getUserIdFromRequest } from '../request-context.js';
 import type { CalendarEventRepository, UserRepository } from '../../storage/repositories/index.js';
 
+import type { GoogleApiService } from '../../services/google-api.js';
+
 const CreateCalendarEventSchema = z.object({
   title: z.string().trim().min(1),
   description: z.string().trim().min(1).optional(),
@@ -17,6 +19,7 @@ const ParamsSchema = z.object({ id: z.string().min(1) });
 type CalendarEventRoutesOptions = {
   calendarEvents: CalendarEventRepository;
   users: UserRepository;
+  googleApi: GoogleApiService;
 };
 
 export async function registerCalendarEventRoutes(
@@ -47,8 +50,14 @@ export async function registerCalendarEventRoutes(
     const body = CreateCalendarEventSchema.parse(request.body);
     options.users.ensureLocalUser(userId);
 
+    // Sync to Google Calendar
+    const googleEventId = await options.googleApi.createCalendarEvent(userId, body);
+
     return reply.code(201).send({
-      item: options.calendarEvents.create(userId, body),
+      item: options.calendarEvents.create(userId, {
+        ...body,
+        googleEventId: googleEventId ?? undefined,
+      }),
     });
   });
 
@@ -98,6 +107,12 @@ export async function registerCalendarEventRoutes(
 
     const params = ParamsSchema.parse(request.params);
     options.users.ensureLocalUser(userId);
+
+    const existing = options.calendarEvents.findById(userId, params.id);
+    if (existing && existing.googleEventId) {
+      // Sync delete to Google Calendar
+      await options.googleApi.deleteCalendarEvent(userId, existing.googleEventId);
+    }
 
     if (!options.calendarEvents.delete(userId, params.id)) {
       return reply.code(404).send({ message: 'Calendar event was not found.' });

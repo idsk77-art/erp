@@ -7,6 +7,7 @@ import { ZodError } from 'zod';
 
 import type { AppConfig } from '../config/env.js';
 import { GoogleOAuthService } from '../services/google-oauth.js';
+import { GoogleApiService } from '../services/google-api.js';
 import { BusinessCardOcrService } from '../services/ocr.js';
 import { SpeechToTextService } from '../services/stt.js';
 import {
@@ -40,6 +41,7 @@ export async function buildServer(config: AppConfig): Promise<FastifyInstance> {
   const reports = new AudioReportRepository(database);
   const fileStorage = new LocalFileStorage(config);
   const googleOAuth = new GoogleOAuthService(config);
+  const googleApi = new GoogleApiService(users, googleOAuth);
   const ocr = new BusinessCardOcrService(config);
   const stt = new SpeechToTextService(reports, config);
 
@@ -86,8 +88,8 @@ export async function buildServer(config: AppConfig): Promise<FastifyInstance> {
 
   await registerAuthRoutes(server, { googleOAuth, users });
   await registerTodoRoutes(server, { todos, users });
-  await registerCalendarEventRoutes(server, { calendarEvents, users });
-  await registerContactRoutes(server, { contacts, users });
+  await registerCalendarEventRoutes(server, { calendarEvents, users, googleApi });
+  await registerContactRoutes(server, { contacts, users, googleApi });
   await registerDocumentRoutes(server, { documents, users });
   await registerReportRoutes(server, { reports, users });
   await registerUploadRoutes(server, {
