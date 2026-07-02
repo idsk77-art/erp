@@ -70,10 +70,11 @@ export async function buildServer(config: AppConfig): Promise<FastifyInstance> {
 
     server.log.error(error);
 
+    const err = error as any;
     return reply.code(500).send({
       message: 'Internal server error.',
-      error: error.message,
-      stack: error.stack,
+      error: err.message,
+      stack: err.stack,
     });
   });
 
