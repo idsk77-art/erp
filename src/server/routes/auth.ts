@@ -64,6 +64,10 @@ export async function registerAuthRoutes(
       `token=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${30 * 24 * 60 * 60}`,
     );
 
+    if (request.headers.accept?.includes('text/html')) {
+      return reply.redirect('/');
+    }
+
     return reply.send({
       user,
       token,
