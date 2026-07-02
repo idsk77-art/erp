@@ -1,0 +1,9 @@
+node_modules
+dist
+data
+uploads
+.env
+scratch
+test_card.png
+*.log
+.git
