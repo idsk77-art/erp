@@ -3,7 +3,18 @@ import 'dotenv/config';
 import { z } from 'zod';
 
 const EnvSchema = z.object({
-  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  NODE_ENV: z
+    .string()
+    .optional()
+    .transform((val) => {
+      if (!val) return 'production';
+      const clean = val.trim().toLowerCase();
+      if (clean === 'development' || clean === 'test' || clean === 'production') {
+        return clean as 'development' | 'test' | 'production';
+      }
+      return 'production';
+    })
+    .default('production'),
   HOST: z.string().min(1).default('0.0.0.0'),
   PORT: z.coerce.number().int().positive().max(65535).default(3000),
   DATABASE_URL: z.string().min(1).default('./data/nano-erp.sqlite'),
